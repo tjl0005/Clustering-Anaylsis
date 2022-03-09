@@ -37,68 +37,63 @@ def get_scores(dfs, labels):
             .format(np.round(silhouette, 3), np.round(calinski_harabasz, 3), np.round(davies_bouldin, 3)))
 
 
-def kmeans_clustering(dfs, columns, n, init, max_i):
+def plot_clusters(dfs, categories, scores, clusters, c_type):
+    # Scatter plot with all labelled values representing clusters
+    dfs.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap='rainbow')
+
+    if c_type == "K-Means":
+        # Center points of the clusters, represented by an X
+        plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X")
+
+    plt.title("{} Clustering".format(c_type))
+    plt.text(8, 18, scores)
+    plt.show()
+
+
+def kmeans_clustering(dfs, categories, n, init, max_i):
     # Number of clusters, run times, max iterations for one run
     kmeans = KMeans(n_clusters=n, n_init=init, max_iter=max_i)
     kmeans.fit(dfs)
     c_scores = get_scores(dfs, kmeans.labels_)
 
-    # Scatter plot with all labelled values representing clusters
-    dfs.plot.scatter(x=columns[0], y=columns[1], c=kmeans.labels_, cmap='rainbow')
-    # Center points of the clusters, represented by an X
-    plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], marker="X")
-
-    plt.title("K-Means Clustering with {} Clusters".format(n))
-    plt.text(8, 18, c_scores)
-    plt.show()
-
     print("Scores for K-Means:\n " + c_scores)
+    plot_clusters(dfs, categories, c_scores, kmeans, "K-Means")
 
 
-def hierarchical_clustering(dfs, columns, n, linkage):
+def hierarchical_clustering(dfs, categories, n, linkage):
     # Number of clusters, linkage, linkage criterion
     hierarchical = AgglomerativeClustering(n_clusters=n, linkage=linkage)
     hierarchical.fit(dfs)
     c_scores = get_scores(dfs, hierarchical.labels_)
 
-    dfs.plot.scatter(x=columns[0], y=columns[1], c=hierarchical.labels_, cmap='rainbow')
-
-    plt.title("Hierarchical Clustering with {} Clusters".format(n))
-    plt.text(8, 18, c_scores)
-    plt.show()
-
     print("\nScores for Hierarchical:\n " + c_scores)
+    plot_clusters(dfs, categories, c_scores, hierarchical, "Hierarchical")
 
 
-def density_clustering(dfs, columns, option):
-    if option == "DBSCAN":
+def density_clustering(dfs, categories, c_type):
+    if c_type == "DBSCAN":
         # Max distances between samples, number of samples for core point
-        dens = DBSCAN(eps=0.5, min_samples=5)
-        dens.fit(dfs)
+        db_c = DBSCAN(eps=0.5, min_samples=5)
+        db_c.fit(dfs)
     else:
         # Number of samples for core point, distance type, min number of samples for a cluster
-        dens = OPTICS(min_samples=5, p=2, min_cluster_size=None)
-        dens.fit(dfs)
+        db_c = OPTICS(min_samples=5, p=2, min_cluster_size=None)
+        db_c.fit(dfs)
 
-    c_scores = get_scores(dfs, dens.labels_)
+    c_scores = get_scores(dfs, db_c.labels_)
 
-    dfs.plot.scatter(x=columns[0], y=columns[1], c=dens.labels_, cmap='rainbow')
-
-    plt.title("Density-Based Clustering with {}".format(option))
-    plt.text(8, 18, c_scores)
-    plt.show()
-
-    print("\nScores for {}:\n ".format(option) + c_scores)
+    plot_clusters(dfs, categories, c_scores, db_c, c_type)
+    print("\nScores for {}:\n ".format(c_type) + c_scores)
 
 
 all_data = prepare_data()
 
-# Accessing the first dataframe, and 2 columns to use
-test_columns = ["Emin Medial", "Emin Lateral"]
-test_data = all_data[0][test_columns]
+# Accessing the first dataframe, and 2 categories to use
+test_categories = ["Emin Medial", "Emin Lateral"]
+test_data = all_data[0][test_categories]
 
 # # Run clustering algorithms, plot respective clusters and print scores
-kmeans_clustering(test_data, test_columns, 10, 10, 300)
-hierarchical_clustering(test_data, test_columns, 10, "ward")
-density_clustering(test_data, test_columns, "DBSCAN")
-density_clustering(test_data, test_columns, "OPTICS")
+kmeans_clustering(test_data, test_categories, 10, 10, 300)
+hierarchical_clustering(test_data, test_categories, 10, "ward")
+density_clustering(test_data, test_categories, "DBSCAN")
+density_clustering(test_data, test_categories, "OPTICS")
