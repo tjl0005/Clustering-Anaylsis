@@ -5,6 +5,24 @@ import pandas as pd
 import numpy as np
 import glob
 
+# Parameters for algorithms
+k_means_params = {
+    "n_clusters": 10,
+    "n_init": 10,  # Number of different centroid seeds to use
+    "max_iter": 300  # Maximum number of iterations for one run
+}
+hierarchical_params = {
+    "n_clusters": 10,
+    "linkage": "ward",  # Decides which points distances are measured between
+    "affinity": "euclidean"  # How distance between points is measured, must euclidean if using ward
+}
+density_params = {
+    "eps": 0.5,  # Decides the max distance between points in one neighbourhood
+    "min_samples": 5,  # Decides what can be a core point
+    "p": 2,  # How distance will be calculated between points
+    "min_cluster_size": None
+}
+
 
 # Create dataframes for all data and drop irrelevant data
 def prepare_data():
@@ -40,50 +58,70 @@ def get_scores(dfs, labels):
 def plot_clusters(dfs, categories, scores, clusters, c_type):
     # Scatter plot with all labelled values representing clusters
     dfs.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap='rainbow')
-
+    
+    # Plot center points of clusters 
     if c_type == "K-Means":
-        # Center points of the clusters, represented by an X
-        plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X")
+        plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X", c="black")
 
-    plt.title("{} Clustering".format(c_type))
-    plt.text(8, 18, scores)
+    plt.title("{} Clusters for {}".format(c_type, categories))
+    plt.text(8, 18, scores)  # Show scores in visualisation
     plt.show()
 
 
-def kmeans_clustering(dfs, categories, n, init, max_i):
-    # Number of clusters, run times, max iterations for one run
-    kmeans = KMeans(n_clusters=n, n_init=init, max_iter=max_i)
-    kmeans.fit(dfs)
-    c_scores = get_scores(dfs, kmeans.labels_)
+def kmeans_clustering(dfs, categories, k_params, plot):
+    k_means = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
+    k_means.fit(dfs)
 
-    print("Scores for K-Means:\n " + c_scores)
-    plot_clusters(dfs, categories, c_scores, kmeans, "K-Means")
+    cluster_scores = get_scores(dfs, k_means.labels_)
+    print("Scores for K-Means:\n " + cluster_scores + "\n")
+
+    # Will only plot the clusters if specified in function call
+    if plot:
+        plot_clusters(dfs, categories, cluster_scores, k_means, "K-Means")
 
 
-def hierarchical_clustering(dfs, categories, n, linkage):
-    # Number of clusters, linkage, linkage criterion
-    hierarchical = AgglomerativeClustering(n_clusters=n, linkage=linkage)
+def hierarchical_clustering(dfs, categories, h_params, plot):
+    hierarchical = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
     hierarchical.fit(dfs)
-    c_scores = get_scores(dfs, hierarchical.labels_)
 
-    print("\nScores for Hierarchical:\n " + c_scores)
-    plot_clusters(dfs, categories, c_scores, hierarchical, "Hierarchical")
+    cluster_scores = get_scores(dfs, hierarchical.labels_)
+    print("Scores for Hierarchical:\n " + cluster_scores + "\n")
+
+    if plot:
+        plot_clusters(dfs, categories, cluster_scores, hierarchical, "K-Hierarchical")
 
 
-def density_clustering(dfs, categories, c_type):
+def density_clustering(dfs, categories, d_params, c_type, plot):
     if c_type == "DBSCAN":
-        # Max distances between samples, number of samples for core point
-        db_c = DBSCAN(eps=0.5, min_samples=5)
-        db_c.fit(dfs)
+        db_c = DBSCAN(eps=d_params["eps"], min_samples=d_params["min_samples"])
     else:
-        # Number of samples for core point, distance type, min number of samples for a cluster
-        db_c = OPTICS(min_samples=5, p=2, min_cluster_size=None)
-        db_c.fit(dfs)
+        db_c = OPTICS(min_samples=d_params["min_samples"], p=d_params["p"],
+                      min_cluster_size=d_params["min_cluster_size"])
 
-    c_scores = get_scores(dfs, db_c.labels_)
+    db_c.fit(dfs)
+    cluster_scores = get_scores(dfs, db_c.labels_)
+    print("Scores for {}:\n ".format(c_type) + cluster_scores + "\n")
 
-    plot_clusters(dfs, categories, c_scores, db_c, c_type)
-    print("\nScores for {}:\n ".format(c_type) + c_scores)
+    if plot:
+        plot_clusters(dfs, categories, cluster_scores, db_c, c_type)
+
+
+def param_sweep(c_type, c_params, data, categories, param, vals):
+    # Go through all potential parameter values
+    for val in vals:
+        print("With {}={}".format(param, val))
+        # Update specified parameter value
+        c_params[param] = val
+        
+        # Run the correct algorithm with updates parameters and do not produce visualisation
+        if c_type == "K-Means":
+            kmeans_clustering(data, categories, c_params, False)
+        elif c_type == "Hierarchical":
+            hierarchical_clustering(data, categories, c_params, False)
+        elif c_type == "DBSCAN":
+            density_clustering(data, categories, c_params, c_type, False)
+        else:
+            density_clustering(data, categories, c_params, c_type, False)
 
 
 all_data = prepare_data()
@@ -92,8 +130,15 @@ all_data = prepare_data()
 test_categories = ["Emin Medial", "Emin Lateral"]
 test_data = all_data[0][test_categories]
 
-# # Run clustering algorithms, plot respective clusters and print scores
-kmeans_clustering(test_data, test_categories, 10, 10, 300)
-hierarchical_clustering(test_data, test_categories, 10, "ward")
-density_clustering(test_data, test_categories, "DBSCAN")
-density_clustering(test_data, test_categories, "OPTICS")
+# Run clustering algorithms, plot respective clusters and print scores
+kmeans_clustering(test_data, test_categories, k_means_params, True)
+hierarchical_clustering(test_data, test_categories, hierarchical_params, True)
+density_clustering(test_data, test_categories, density_params, "DBSCAN", True)
+density_clustering(test_data, test_categories, density_params, "OPTICS", True)
+
+# Sweeping number of clusters, will output scores for each sweep
+param_sweep("K-Means", k_means_params, test_data, test_categories, "n_clusters", [4, 5, 6])
+param_sweep("Hierarchical", hierarchical_params, test_data, test_categories, "n_clusters", [4, 5, 6])
+# Sweeping size of minimum sample, will output scores for each sweep
+param_sweep("DBSCAN", density_params, test_data, test_categories, "min_samples", [4, 5, 6])
+param_sweep("OPTICS", density_params, test_data, test_categories, "min_samples", [4, 5, 6])
