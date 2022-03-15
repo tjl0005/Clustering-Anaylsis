@@ -25,30 +25,42 @@ density_params = {
 
 
 # Create dataframes for given year
-def prepare_data(year):
+def prepare_data(spec):
     # List of all Excel files
-    files = glob.glob("../data/*{}.xls".format(year))
+    files = glob.glob("../data/*{}.xls".format(spec))
+    ids = pd.read_csv("../data/oai_xrays.csv")
     dfs = []
+
+    # Get relevant ids
+    if spec.endswith("R"):
+        ids.drop(ids[ids.side != 1].index, inplace=True)
+    else:
+        ids.drop(ids[ids.side != 2].index, inplace=True)
 
     # Go through all xls files
     for i in range(len(files)):
         # Add dataframe to list
-        dfs.append(pd.read_excel(files[i], sheet_name=0))
+        df = pd.read_excel(files[i], sheet_name=0)
 
         # Remove irrelevant columns
-        if "Error" in dfs[i].columns:
-            dfs[i].drop("Error", axis=1, inplace=True)
-        elif "Warning" in dfs[i].columns:
-            dfs[i].drop("Warning", axis=1, inplace=True)
-        elif "RatioPixelmm" in dfs[i].columns:
-            dfs[i].drop("RatioPixelmm", axis=1, inplace=True)
+        if "Error" in df.columns:
+            df.drop("Error", axis=1, inplace=True)
+        elif "Warning" in df.columns:
+            df.drop("Warning", axis=1, inplace=True)
+        elif "RatioPixelmm" in df.columns:
+            df.drop("RatioPixelmm", axis=1, inplace=True)
 
-        dfs[i].rename(columns={'Name': 'ID'}, inplace=True)
-        dfs[i].drop("Year", axis=1, inplace=True)
-        dfs[i].drop("LOR", axis=1, inplace=True)
-        dfs[i]['ID'] = dfs[i]['ID'].replace('.dcm', '', regex=True)
+        df.drop("Year", axis=1, inplace=True)
+        df.drop("LOR", axis=1, inplace=True)
 
-    # All dataframes
+        df.rename(columns={"Name": "ID"}, inplace=True)
+        df["ID"] = pd.to_numeric(df["ID"].replace(".dcm", "", regex=True))
+
+        # Remove rows with irrelevant IDs
+        df = df[df["ID"].isin(ids.ID.to_list())]
+
+        dfs.append(df)
+
     return dfs
 
 
@@ -64,7 +76,7 @@ def get_scores(data, labels):
 
 def plot_clusters(df, categories, scores, clusters, c_type):
     # Scatter plot with all labelled values representing clusters
-    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap='rainbow')
+    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap="rainbow")
 
     # Plot center points of clusters 
     if c_type == "K-Means":
@@ -150,12 +162,13 @@ def diff_calc(zero, twenty_four):
 
         # For each column calculate the difference between year 00 and year 24
         for col in cols:
-            df['{}_diff'.format(col)] = df['{}_x'.format(col)] - df['{}_y'.format(col)]
+            df["{}_diff".format(col)] = df["{}_x".format(col)] - df["{}_y".format(col)]
 
-        # Produce a list of the difference dataframe
-        diff_dfs.append(df.filter(like='diff', axis=1))
-        # Include IDs
-        diff_dfs[i] = diff_dfs[i].join(df["ID"])
+        ids = df.ID
+        df = df.filter(like="diff", axis=1)
+        df.insert(loc=0, column="ID", value=ids)
+
+        diff_dfs.append(df)
 
     return diff_dfs
 
@@ -164,4 +177,4 @@ def diff_calc(zero, twenty_four):
 left_diff = diff_calc(prepare_data("00L"), prepare_data("24L"))
 right_diff = diff_calc(prepare_data("00R"), prepare_data("24R"))
 
-print(left_diff[0])
+print(left_diff)
