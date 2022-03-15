@@ -24,10 +24,10 @@ density_params = {
 }
 
 
-# Create dataframes for all data and drop irrelevant data
-def prepare_data():
+# Create dataframes for given year
+def prepare_data(year):
     # List of all Excel files
-    files = glob.glob("../data/*.xls")
+    files = glob.glob("../data/*{}.xls".format(year))
     dfs = []
 
     # Go through all xls files
@@ -40,25 +40,32 @@ def prepare_data():
             dfs[i].drop("Error", axis=1, inplace=True)
         elif "Warning" in dfs[i].columns:
             dfs[i].drop("Warning", axis=1, inplace=True)
+        elif "RatioPixelmm" in dfs[i].columns:
+            dfs[i].drop("RatioPixelmm", axis=1, inplace=True)
+
+        dfs[i].rename(columns={'Name': 'ID'}, inplace=True)
+        dfs[i].drop("Year", axis=1, inplace=True)
+        dfs[i].drop("LOR", axis=1, inplace=True)
+        dfs[i]['ID'] = dfs[i]['ID'].replace('.dcm', '', regex=True)
 
     # All dataframes
     return dfs
 
 
-def get_scores(dfs, labels):
-    silhouette = metrics.silhouette_score(dfs, labels)  # 1 is best, 0 worst
-    calinski_harabasz = metrics.calinski_harabasz_score(dfs, labels)  # Higher is better
-    davies_bouldin = metrics.davies_bouldin_score(dfs, labels)  # Lower is better, 0-1
+def get_scores(data, labels):
+    silhouette = metrics.silhouette_score(data, labels)  # 1 is best, 0 worst
+    calinski_harabasz = metrics.calinski_harabasz_score(data, labels)  # Higher is better
+    davies_bouldin = metrics.davies_bouldin_score(data, labels)  # Lower is better, 0-1
 
     # Formatted string to show scores
-    return ("Silhouette Coefficient: {}\n Calinski-Harabasz Index: {}\n Davies-Bouldin Index: {}"
+    return (" Silhouette Coefficient: {}\n Calinski-Harabasz Index: {}\n Davies-Bouldin Index: {}"
             .format(np.round(silhouette, 3), np.round(calinski_harabasz, 3), np.round(davies_bouldin, 3)))
 
 
-def plot_clusters(dfs, categories, scores, clusters, c_type):
+def plot_clusters(df, categories, scores, clusters, c_type):
     # Scatter plot with all labelled values representing clusters
-    dfs.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap='rainbow')
-    
+    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap='rainbow')
+
     # Plot center points of clusters 
     if c_type == "K-Means":
         plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X", c="black")
@@ -68,42 +75,43 @@ def plot_clusters(dfs, categories, scores, clusters, c_type):
     plt.show()
 
 
-def kmeans_clustering(dfs, categories, k_params, plot):
+def kmeans_clustering(data, categories, k_params, plot):
     k_means = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
-    k_means.fit(dfs)
+    k_means.fit(data)
 
-    cluster_scores = get_scores(dfs, k_means.labels_)
-    print("Scores for K-Means:\n " + cluster_scores + "\n")
+    cluster_scores = get_scores(data, k_means.labels_)
+    print("Scores for K-Means:\n{}\n".format(cluster_scores))
 
     # Will only plot the clusters if specified in function call
     if plot:
-        plot_clusters(dfs, categories, cluster_scores, k_means, "K-Means")
+        plot_clusters(data, categories, cluster_scores, k_means, "K-Means")
 
 
-def hierarchical_clustering(dfs, categories, h_params, plot):
+def hierarchical_clustering(data, categories, h_params, plot):
     hierarchical = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
-    hierarchical.fit(dfs)
+    hierarchical.fit(data)
 
-    cluster_scores = get_scores(dfs, hierarchical.labels_)
-    print("Scores for Hierarchical:\n " + cluster_scores + "\n")
+    cluster_scores = get_scores(data, hierarchical.labels_)
+    print("Scores for Hierarchical:\n{}\n".format(cluster_scores))
 
     if plot:
-        plot_clusters(dfs, categories, cluster_scores, hierarchical, "K-Hierarchical")
+        plot_clusters(data, categories, cluster_scores, hierarchical, "Hierarchical")
 
 
-def density_clustering(dfs, categories, d_params, c_type, plot):
+def density_clustering(data, categories, d_params, c_type, plot):
+    # Use different parameters so need to be setup separately
     if c_type == "DBSCAN":
         db_c = DBSCAN(eps=d_params["eps"], min_samples=d_params["min_samples"])
     else:
         db_c = OPTICS(min_samples=d_params["min_samples"], p=d_params["p"],
                       min_cluster_size=d_params["min_cluster_size"])
 
-    db_c.fit(dfs)
-    cluster_scores = get_scores(dfs, db_c.labels_)
-    print("Scores for {}:\n ".format(c_type) + cluster_scores + "\n")
+    db_c.fit(data)
+    cluster_scores = get_scores(data, db_c.labels_)
+    print("Scores for {}:\n{}\n".format(c_type, cluster_scores))
 
     if plot:
-        plot_clusters(dfs, categories, cluster_scores, db_c, c_type)
+        plot_clusters(data, categories, cluster_scores, db_c, c_type)
 
 
 def param_sweep(c_type, c_params, data, categories, param, vals):
@@ -112,7 +120,7 @@ def param_sweep(c_type, c_params, data, categories, param, vals):
         print("With {}={}".format(param, val))
         # Update specified parameter value
         c_params[param] = val
-        
+
         # Run the correct algorithm with updates parameters and do not produce visualisation
         if c_type == "K-Means":
             kmeans_clustering(data, categories, c_params, False)
@@ -124,21 +132,36 @@ def param_sweep(c_type, c_params, data, categories, param, vals):
             density_clustering(data, categories, c_params, c_type, False)
 
 
-all_data = prepare_data()
+# Find differences between attributes
+def diff_calc(zero, twenty_four):
+    diff_dfs = []
+    for i in range(len(zero)):
+        df = zero[i].merge(twenty_four[i], on="ID")  # Merge dataframes using ID
 
-# Accessing the first dataframe, and 2 categories to use
-test_categories = ["Emin Medial", "Emin Lateral"]
-test_data = all_data[0][test_categories]
+        # Find which columns to use
+        if "Emin Medial_x" in df.columns:
+            cols = ["Emin Medial", "Emin Lateral", "Tibial Thick"]
+        elif "FTA_x" in df.columns:
+            cols = ["FTA"]
+        elif "JLCA_LowestPoint_x" in df.columns:
+            cols = ["JLCA_LowestPoint", "JLCA_P0726"]
+        else:
+            cols = ["MinLatJSW", "MaxLatJSW", "MeanLatJSW", "MinMedJSW", "MeanMedJSW", "MeanJSW", "MinJSW", "MaxJSW"]
 
-# Run clustering algorithms, plot respective clusters and print scores
-kmeans_clustering(test_data, test_categories, k_means_params, True)
-hierarchical_clustering(test_data, test_categories, hierarchical_params, True)
-density_clustering(test_data, test_categories, density_params, "DBSCAN", True)
-density_clustering(test_data, test_categories, density_params, "OPTICS", True)
+        # For each column calculate the difference between year 00 and year 24
+        for col in cols:
+            df['{}_diff'.format(col)] = df['{}_x'.format(col)] - df['{}_y'.format(col)]
 
-# Sweeping number of clusters, will output scores for each sweep
-param_sweep("K-Means", k_means_params, test_data, test_categories, "n_clusters", [4, 5, 6])
-param_sweep("Hierarchical", hierarchical_params, test_data, test_categories, "n_clusters", [4, 5, 6])
-# Sweeping size of minimum sample, will output scores for each sweep
-param_sweep("DBSCAN", density_params, test_data, test_categories, "min_samples", [4, 5, 6])
-param_sweep("OPTICS", density_params, test_data, test_categories, "min_samples", [4, 5, 6])
+        # Produce a list of the difference dataframe
+        diff_dfs.append(df.filter(like='diff', axis=1))
+        # Include IDs
+        diff_dfs[i] = diff_dfs[i].join(df["ID"])
+
+    return diff_dfs
+
+
+# Contains a list of dataframes showing the differences of attributes
+left_diff = diff_calc(prepare_data("00L"), prepare_data("24L"))
+right_diff = diff_calc(prepare_data("00R"), prepare_data("24R"))
+
+print(left_diff[0])
