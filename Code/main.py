@@ -64,101 +64,13 @@ def prepare_data(spec):
     return dfs
 
 
-def get_scores(data, labels):
-    silhouette = metrics.silhouette_score(data, labels)  # 1 is best, 0 worst
-    calinski_harabasz = metrics.calinski_harabasz_score(data, labels)  # Higher is better
-    davies_bouldin = metrics.davies_bouldin_score(data, labels)  # Lower is better, 0-1
-
-    # Formatted string to show scores
-    return (" Silhouette Coefficient: {}\n Calinski-Harabasz Index: {}\n Davies-Bouldin Index: {}"
-            .format(np.round(silhouette, 3), np.round(calinski_harabasz, 3), np.round(davies_bouldin, 3)))
-
-
-def plot_clusters(df, categories, scores, clusters, c_type):
-    # Scatter plot with all labelled values representing clusters
-    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap="rainbow")
-
-    # Plot center points of clusters 
-    if c_type == "K-Means":
-        plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X", c="black")
-
-    plt.title("{} Clusters for {}".format(c_type, categories))
-    plt.text(8, 18, scores)  # Show scores in visualisation
-    plt.show()
-
-
-def kmeans_clustering(data, categories, k_params, plot):
-    k_means = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
-    k_means.fit(data)
-
-    cluster_scores = get_scores(data, k_means.labels_)
-    print("Scores for K-Means:\n{}\n".format(cluster_scores))
-
-    # Will only plot the clusters if specified in function call
-    if plot:
-        plot_clusters(data, categories, cluster_scores, k_means, "K-Means")
-
-
-def hierarchical_clustering(data, categories, h_params, plot):
-    hierarchical = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
-    hierarchical.fit(data)
-
-    cluster_scores = get_scores(data, hierarchical.labels_)
-    print("Scores for Hierarchical:\n{}\n".format(cluster_scores))
-
-    if plot:
-        plot_clusters(data, categories, cluster_scores, hierarchical, "Hierarchical")
-
-
-def density_clustering(data, categories, d_params, c_type, plot):
-    # Use different parameters so need to be setup separately
-    if c_type == "DBSCAN":
-        db_c = DBSCAN(eps=d_params["eps"], min_samples=d_params["min_samples"])
-    else:
-        db_c = OPTICS(min_samples=d_params["min_samples"], p=d_params["p"],
-                      min_cluster_size=d_params["min_cluster_size"])
-
-    db_c.fit(data)
-    cluster_scores = get_scores(data, db_c.labels_)
-    print("Scores for {}:\n{}\n".format(c_type, cluster_scores))
-
-    if plot:
-        plot_clusters(data, categories, cluster_scores, db_c, c_type)
-
-
-def param_sweep(c_type, c_params, data, categories, param, vals):
-    # Go through all potential parameter values
-    for val in vals:
-        print("With {}={}".format(param, val))
-        # Update specified parameter value
-        c_params[param] = val
-
-        # Run the correct algorithm with updates parameters and do not produce visualisation
-        if c_type == "K-Means":
-            kmeans_clustering(data, categories, c_params, False)
-        elif c_type == "Hierarchical":
-            hierarchical_clustering(data, categories, c_params, False)
-        elif c_type == "DBSCAN":
-            density_clustering(data, categories, c_params, c_type, False)
-        else:
-            density_clustering(data, categories, c_params, c_type, False)
-
-
 # Find differences between attributes
 def diff_calc(zero, twenty_four):
     diff_dfs = []
     for i in range(len(zero)):
         df = zero[i].merge(twenty_four[i], on="ID")  # Merge dataframes using ID
 
-        # Find which columns to use
-        if "Emin Medial_x" in df.columns:
-            cols = ["Emin Medial", "Emin Lateral", "Tibial Thick"]
-        elif "FTA_x" in df.columns:
-            cols = ["FTA"]
-        elif "JLCA_LowestPoint_x" in df.columns:
-            cols = ["JLCA_LowestPoint", "JLCA_P0726"]
-        else:
-            cols = ["MinLatJSW", "MaxLatJSW", "MeanLatJSW", "MinMedJSW", "MeanMedJSW", "MeanJSW", "MinJSW", "MaxJSW"]
+        cols = get_columns(df)
 
         # For each column calculate the difference between year 00 and year 24
         for col in cols:
@@ -173,8 +85,134 @@ def diff_calc(zero, twenty_four):
     return diff_dfs
 
 
+# Find which columns to use
+def get_columns(df):
+    if "Emin Medial_x" in df.columns or "Emin Medial" in df.columns:
+        return ["Emin Medial", "Emin Lateral", "Tibial Thick"]
+    elif "FTA_x" in df.columns or "FTA" in df.columns:
+        return ["FTA"]
+    elif "JLCA_LowestPoint_x" in df.columns or "JLCA_LowestPoint" in df.columns:
+        return ["JLCA_LowestPoint", "JLCA_P0726"]
+    else:
+        return ["MinLatJSW", "MaxLatJSW", "MeanLatJSW", "MinMedJSW", "MeanMedJSW", "MeanJSW", "MinJSW", "MaxJSW"]
+
+
+def plot_clusters(df, categories, scores, clusters, c_type):
+    # Scatter plot with all labelled values representing clusters
+    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap="rainbow")
+
+    # Plot center points of clusters
+    if c_type == "K-Means":
+        plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X", c="black")
+
+    plt.title("{} Clusters for {}".format(c_type, categories))
+    plt.text(8, 18, scores)  # Show scores in visualisation
+    plt.show()
+
+
+def get_scores(data, labels, c_type, display):
+    # A measure of how dense and seperated the clusters are
+    silhouette = np.round(metrics.silhouette_score(data, labels), 3)  # 1 is best, 0 worst
+    # Measure of separation
+    davies_bouldin = np.round(metrics.davies_bouldin_score(data, labels), 3)  # Lower is better
+    # How effective the number of clusters are
+    calinski_harabasz = np.round(metrics.calinski_harabasz_score(data, labels), 3)  # Higher is better
+
+    if silhouette == -1 or calinski_harabasz == -1 or davies_bouldin == -1:
+        print("Score error")
+    elif display:
+        return ("Scores for {}:\n Silhouette Coefficient: {}\n Calinski Harabasz: {}\n Davies-Bouldin Index: {}\n"
+                .format(c_type, silhouette, calinski_harabasz, davies_bouldin))
+    else:
+        return silhouette, calinski_harabasz, davies_bouldin
+
+
+def param_sweep(c_type, c_params, data, categories, param, vals):
+    silhouette = []
+    davies = []
+    calinski = []
+
+    # Go through all potential parameter values
+    for val in vals:
+        # Update specified parameter value
+        c_params[param] = val
+
+        # Run the correct algorithm with updates parameters and do not produce visualisation
+        if c_type == "K-Means":
+            data, labels = kmeans_clustering(data, categories, c_params, "score")
+        elif c_type == "Hierarchical":
+            data, labels = hierarchical_clustering(data, categories, c_params, "score")
+        else:
+            data, labels = density_clustering(data, categories, c_params, c_type, "score")
+
+        scores = get_scores(data, labels, c_type, "")
+
+        silhouette.append(scores[0])
+        calinski.append(scores[1])
+        davies.append(scores[2])
+
+    rank_results(silhouette, vals, "Silhouette")
+    rank_results(calinski, vals, "Calinski")
+    rank_results(davies, vals, "Davies")
+
+
+def rank_results(scores, vals, metric):
+    s_scores = np.argsort(scores)
+
+    print("\n{}:".format(metric))
+
+    if metric == "Calinski":
+        for i in s_scores:
+            print("Score: {} from value: {}".format(scores[i], vals[i]))
+    else:
+        for i in reversed(s_scores):
+            print("Score: {} from value: {}".format(scores[i], vals[i]))
+
+
+def kmeans_clustering(data, categories, k_params, display):
+    k_means = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
+    k_means.fit(data)
+
+    # Decide how to display results
+    if display == "plot":
+        plot_clusters(data, categories, get_scores(data, k_means.labels_, "K-Means", True), k_means, "K-Means")
+    elif display == "print":
+        print(get_scores(data, k_means.labels_, "K-Means", True))
+    else:
+        return data, k_means.labels_
+
+
+def hierarchical_clustering(data, categories, h_params, display):
+    hierarchical = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
+    hierarchical.fit(data)
+
+    if display == "plot":
+        plot_clusters(data, categories, get_scores(data, hierarchical.labels_, "Hierarchical", True), hierarchical,
+                      "Hierarchical")
+    elif display == "print":
+        print(get_scores(data, hierarchical.labels_, "Hierarchical", True))
+    else:
+        return data, hierarchical.labels_
+
+
+def density_clustering(data, categories, d_params, c_type, display):
+    # Use different parameters so need to be setup separately
+    if c_type == "DBSCAN":
+        db_c = DBSCAN(eps=d_params["eps"], min_samples=d_params["min_samples"])
+    else:
+        db_c = OPTICS(min_samples=d_params["min_samples"], p=d_params["p"],
+                      min_cluster_size=d_params["min_cluster_size"])
+
+    db_c.fit(data)
+
+    if display == "plot":
+        plot_clusters(data, categories, get_scores(data, db_c.labels_, c_type, True), db_c, c_type)
+    elif display == "print":
+        print(get_scores(data, db_c.labels_, c_type, True))
+    else:
+        return get_scores(data, db_c.labels_, c_type, False)
+
+
 # Contains a list of dataframes showing the differences of attributes
 left_diff = diff_calc(prepare_data("00L"), prepare_data("24L"))
 right_diff = diff_calc(prepare_data("00R"), prepare_data("24R"))
-
-print(left_diff)
