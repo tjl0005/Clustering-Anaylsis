@@ -1,21 +1,21 @@
 import glob
 import pandas as pd
+from sklearn.decomposition import PCA
 
 
-# Create dataframes for given specification
-def prepare_data(spec):
-    # List of all Excel files
+def prep(spec):
+    """Create processed dataframe with given specification"""
+    # List of all Excel files matching spec
     files = glob.glob("../data/*{}.xls".format(spec))
     ids = pd.read_csv("../data/oai_xrays.csv")
     dfs = []
 
-    # Get ids for selected index knee
+    # Get ids for relevant index knees
     if spec.endswith("R"):
         ids.drop(ids[ids.side != 1].index, inplace=True)
     else:
         ids.drop(ids[ids.side != 2].index, inplace=True)
 
-    # Go through the data files
     for i in range(len(files)):
         # Add dataframe to list
         df = pd.read_excel(files[i], sheet_name=0)
@@ -31,6 +31,7 @@ def prepare_data(spec):
         # Drop irrelevant columns
         df.drop("Year", axis=1, inplace=True)
         df.drop("LOR", axis=1, inplace=True)
+
         # Normalise IDs across dataframes
         df.rename(columns={"Name": "ID"}, inplace=True)
         df["ID"] = pd.to_numeric(df["ID"].replace(".dcm", "", regex=True))
@@ -43,11 +44,10 @@ def prepare_data(spec):
     return dfs
 
 
-# Find differences between attributes
-def diff_calc(zero, twenty_four):
+def calc_diff(zero, twenty_four):
+    """Find differences between attributes of two dataframes"""
     diff_dfs = []
 
-    # For each dataframe in year 00
     for i in range(len(zero)):
         df = zero[i].merge(twenty_four[i], on="ID")  # Merge years 00 and 24
 
@@ -65,7 +65,7 @@ def diff_calc(zero, twenty_four):
         for col in cols:
             df["{}_diff".format(col)] = df["{}_x".format(col)] - df["{}_y".format(col)]
 
-        # Limit dataframe to only contain difference attributes and the original ID
+        # Limit dataframe to only contain difference attributes and reinsert IDs
         ids = df.ID
         df = df.filter(like="diff", axis=1)
         df.insert(loc=0, column="ID", value=ids)
@@ -73,3 +73,17 @@ def diff_calc(zero, twenty_four):
         diff_dfs.append(df)
 
     return diff_dfs
+
+
+def reduce(df):
+    """Reduce the dimensions of the given dataframe to 2"""
+    # ID is not relevant data
+    if "ID" in df.columns:
+        df.drop("ID", axis=1, inplace=True)
+
+    # Reduce dimensions to n
+    pca = PCA(n_components=2)
+    principalComponents = pca.fit_transform(df)
+
+    # Return the reduced dataframe
+    return pd.DataFrame(data=principalComponents, columns=['C1', 'C2'])

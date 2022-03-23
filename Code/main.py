@@ -1,23 +1,28 @@
-from Code.clustering import kmeans_clustering, hierarchical_clustering, density_clustering
-from Code.data import diff_calc, prepare_data
+from Code.clustering import kmeans, hierarchical, density
+from Code.data import calc_diff, prep, reduce
 from Code.ranking import param_sweep
 import json
 
+# Labels fpr each dataset
+labels = ["Eminence Thickness", "Femorotibial Angle", "Joint Line Convergence Angle", "Joint Space Width"]
+
 # Default parameters for the algorithms
-f = open("../config/def_params.json")
-params = json.load(f)
-f.close()
+with open("../config/def_params.json") as f:
+    params = json.load(f)
 
+# Dataframes for differences for index knees
+left_diff = calc_diff(prep("00L"), prep("24L"))
+right_diff = calc_diff(prep("00R"), prep("24R"))
 
-# Example function calls
-def function_test(diff):
-    param_sweep("K-Means", params['kmeans'], diff[0], "n_clusters", [4, 5, 6])
-    kmeans_clustering(diff[0], params['kmeans'], "print")
-    # kmeans_clustering(diff[0], params['kmeans'], "plot")
+# Example data to cluster and label
+diff = reduce(left_diff[2])
+label = labels[2]
 
+# Example plots
+kmeans(diff, params['kmeans'], "plot", label)
+hierarchical(diff, params['hierarchical'], "plot", label)
+density(diff, params['density'], "DBSCAN", "plot", label)
+density(diff, params['density'], "OPTICS", "plot", label)
 
-# Contains a list of dataframes showing the differences of attributes for left and right index knees
-left_diff = diff_calc(prepare_data("00L"), prepare_data("24L"))
-right_diff = diff_calc(prepare_data("00R"), prepare_data("24R"))
-
-function_test(left_diff)
+# Example parameter sweep
+param_sweep("Hierarchical", params['hierarchical'], diff, "n_clusters", [4, 5, 6], label)
