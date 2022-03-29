@@ -2,7 +2,7 @@ from Code.clustering import kmeans, hierarchical, density, scores
 import numpy as np
 
 
-def param_sweep(c_type, c_params, data, param, vals, label):
+def param_sweep(c_type, c_params, data, param, vals):
     """Test algorithm with different parameter values"""
     silhouette = []
     davies = []
@@ -14,11 +14,11 @@ def param_sweep(c_type, c_params, data, param, vals, label):
 
         # Run the correct algorithm with updates parameters and do not produce visualisation
         if c_type == "K-Means":
-            data, labels = kmeans(data, c_params, "score", label)
+            data, labels = kmeans(data, c_params, "score")
         elif c_type == "Hierarchical":
-            data, labels = hierarchical(data, c_params, "score", label)
+            data, labels = hierarchical(data, c_params, "score")
         else:
-            data, labels = density(data, c_params, c_type, "score", label)
+            data, labels = density(data, c_params, c_type, "score")
 
         score = scores(data, labels, "")
 

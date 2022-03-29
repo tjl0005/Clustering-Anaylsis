@@ -21,7 +21,7 @@ def scores(data, labels, display):
         return silhouette, calinski_harabasz, davies_bouldin
 
 
-def scatter_plot(df, score, clusters, c_type, label):
+def scatter_plot(df, score, clusters, c_type):
     """Produce scatter plot for the clusters"""
     categories = df.columns.values
 
@@ -36,38 +36,38 @@ def scatter_plot(df, score, clusters, c_type, label):
     plt.plot([], label=score)
     plt.legend(handlelength=0, frameon=False, handletextpad=0)
 
-    plt.title("{} with {}".format(c_type, label))
+    plt.title(c_type)
     plt.show()
 
 
-def kmeans(data, k_params, display, label):
+def kmeans(data, k_params, display):
     """Produce clusters using K-Means"""
     clustering = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
     clustering.fit(data)
 
     # Decide how to display results
     if display == "plot":
-        scatter_plot(data, scores(data, clustering.labels_, True), clustering, "K-Means", label)
+        scatter_plot(data, scores(data, clustering.labels_, True), clustering, "K-Means")
     elif display == "print":
         print(scores(data, clustering.labels_, True))
     else:
         return data, clustering.labels_
 
 
-def hierarchical(data, h_params, display, label):
+def hierarchical(data, h_params, display):
     """Produce clusters using Agglomerative Clustering"""
     clustering = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
     clustering.fit(data)
 
     if display == "plot":
-        scatter_plot(data, scores(data, clustering.labels_, True), clustering, "Hierarchical", label)
+        scatter_plot(data, scores(data, clustering.labels_, True), clustering, "Hierarchical")
     elif display == "print":
         print(scores(data, clustering.labels_, True))
     else:
         return data, clustering.labels_
 
 
-def density(data, d_params, c_type, display, label):
+def density(data, d_params, c_type, display):
     """Produce clusters using either DBSCAN or OPTICS"""
     # Use different parameters so need to be setup separately
     if c_type == "DBSCAN":
@@ -79,7 +79,7 @@ def density(data, d_params, c_type, display, label):
     db_c.fit(data)
 
     if display == "plot":
-        scatter_plot(data, scores(data, db_c.labels_, True), db_c, c_type, label)
+        scatter_plot(data, scores(data, db_c.labels_, True), db_c, c_type)
     elif display == "print":
         print(scores(data, db_c.labels_, True))
     else:

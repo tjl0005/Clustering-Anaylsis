@@ -1,6 +1,9 @@
 import glob
+import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
+
+pd.set_option('display.max_columns', None)
 
 
 def prep(spec):
@@ -20,18 +23,6 @@ def prep(spec):
         # Add dataframe to list
         df = pd.read_excel(files[i], sheet_name=0)
 
-        # Remove irrelevant columns
-        if "Error" in df.columns:
-            df.drop("Error", axis=1, inplace=True)
-        elif "Warning" in df.columns:
-            df.drop("Warning", axis=1, inplace=True)
-        elif "RatioPixelmm" in df.columns:
-            df.drop("RatioPixelmm", axis=1, inplace=True)
-
-        # Drop irrelevant columns
-        df.drop("Year", axis=1, inplace=True)
-        df.drop("LOR", axis=1, inplace=True)
-
         # Normalise IDs across dataframes
         df.rename(columns={"Name": "ID"}, inplace=True)
         df["ID"] = pd.to_numeric(df["ID"].replace(".dcm", "", regex=True))
@@ -41,38 +32,38 @@ def prep(spec):
 
         dfs.append(df)
 
-    return dfs
+    # Turn list of dataframes into a single dataframe
+    final_df = pd.concat(dfs, axis=1)
+
+    # Drop all irrelevant columns
+    d_columns = ["Year", "LOR", "Error", "Warning", "RatioPixelmm", "Position 10cm Fem"]
+    for col in d_columns:
+        final_df.drop(col, axis=1, inplace=True)
+
+    # Remove invalid rows
+    final_df.replace("", np.nan, inplace=True)
+    final_df.dropna(inplace=True)
+
+    # Return without duplicate ID columns
+    return final_df.loc[:, ~final_df.columns.duplicated()]
 
 
 def calc_diff(zero, twenty_four):
     """Find differences between attributes of two dataframes"""
-    diff_dfs = []
+    cols = zero.columns
+    df = zero.merge(twenty_four, on="ID")  # Merge years 00 and 24
+    ids = df.ID
 
-    for i in range(len(zero)):
-        df = zero[i].merge(twenty_four[i], on="ID")  # Merge years 00 and 24
-
-        # Select correct list of columns
-        if "Emin Medial_x" in df.columns:
-            cols = ["Emin Medial", "Emin Lateral", "Tibial Thick"]
-        elif "FTA_x" in df.columns:
-            cols = ["FTA"]
-        elif "JLCA_LowestPoint_x" in df.columns:
-            cols = ["JLCA_LowestPoint", "JLCA_P0726"]
-        else:
-            cols = ["MinLatJSW", "MaxLatJSW", "MeanLatJSW", "MinMedJSW", "MeanMedJSW", "MeanJSW", "MinJSW", "MaxJSW"]
-
-        # For each column calculate the difference between year 00(x) and year 24(y)
-        for col in cols:
+    # For each column calculate the difference between year 00(x) and year 24(y)
+    for col in cols:
+        if col != "ID":
             df["{}_diff".format(col)] = df["{}_x".format(col)] - df["{}_y".format(col)]
 
-        # Limit dataframe to only contain difference attributes and reinsert IDs
-        ids = df.ID
-        df = df.filter(like="diff", axis=1)
-        df.insert(loc=0, column="ID", value=ids)
+    # Limit dataframe to only contain difference attributes and reinsert IDs
+    df = df.filter(like="diff", axis=1)
+    df.insert(loc=0, column="ID", value=ids)
 
-        diff_dfs.append(df)
-
-    return diff_dfs
+    return df
 
 
 def reduce(df):
@@ -86,4 +77,4 @@ def reduce(df):
     principalComponents = pca.fit_transform(df)
 
     # Return the reduced dataframe
-    return pd.DataFrame(data=principalComponents, columns=['C1', 'C2'])
+    return pd.DataFrame(data=principalComponents, columns=['PC1', 'PC2'])
