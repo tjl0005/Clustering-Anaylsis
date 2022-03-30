@@ -33,37 +33,37 @@ def prep(spec):
         dfs.append(df)
 
     # Turn list of dataframes into a single dataframe
-    final_df = pd.concat(dfs, axis=1)
+    prep_df = pd.concat(dfs, axis=1)
 
     # Drop all irrelevant columns
     d_columns = ["Year", "LOR", "Error", "Warning", "RatioPixelmm", "Position 10cm Fem"]
     for col in d_columns:
-        final_df.drop(col, axis=1, inplace=True)
+        prep_df.drop(col, axis=1, inplace=True)
 
     # Remove invalid rows
-    final_df.replace("", np.nan, inplace=True)
-    final_df.dropna(inplace=True)
+    prep_df.replace("", np.nan, inplace=True)
+    prep_df.dropna(inplace=True)
 
     # Return without duplicate ID columns
-    return final_df.loc[:, ~final_df.columns.duplicated()]
+    return prep_df.loc[:, ~prep_df.columns.duplicated()]
 
 
 def calc_diff(zero, twenty_four):
     """Find differences between attributes of two dataframes"""
     cols = zero.columns
-    df = zero.merge(twenty_four, on="ID")  # Merge years 00 and 24
-    ids = df.ID
+    diff_df = zero.merge(twenty_four, on="ID")  # Merge years 00 and 24
+    ids = diff_df.ID
 
     # For each column calculate the difference between year 00(x) and year 24(y)
     for col in cols:
         if col != "ID":
-            df["{}_diff".format(col)] = df["{}_x".format(col)] - df["{}_y".format(col)]
+            diff_df["{}_diff".format(col)] = diff_df["{}_x".format(col)] - diff_df["{}_y".format(col)]
 
     # Limit dataframe to only contain difference attributes and reinsert IDs
-    df = df.filter(like="diff", axis=1)
-    df.insert(loc=0, column="ID", value=ids)
+    diff_df = diff_df.filter(like="diff", axis=1)
+    diff_df.insert(loc=0, column="ID", value=ids)
 
-    return df
+    return diff_df
 
 
 def reduce(df):

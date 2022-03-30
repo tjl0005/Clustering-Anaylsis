@@ -9,32 +9,31 @@ def scores(data, labels, display):
     # A measure of similarity to other clusters
     silhouette = np.round(metrics.silhouette_score(data, labels), 2)  # 1 is best, 0 worst
     # Measure of separation
-    davies_bouldin = np.round(metrics.davies_bouldin_score(data, labels), 2)  # Lower is better
+    davies_bouldin = np.round(metrics.davies_bouldin_score(data, labels), 2)  # Lower is better, 0-1
     # Dispersion of clusters, is the current number of clusters good
     calinski_harabasz = np.round(metrics.calinski_harabasz_score(data, labels), 2)  # Higher is better
 
     # Decide on output method
     if display:
-        return ("Silhouette: {}\nCalinski-Harabasz: {}\nDavies-Bouldin: {}\n"
-                .format(silhouette, calinski_harabasz, davies_bouldin))
+        return ("Silhouette: {}\nDavies-Bouldin: {}\nCalinski-Harabasz: {}\n"
+                .format(silhouette, davies_bouldin, calinski_harabasz))
     else:
-        return silhouette, calinski_harabasz, davies_bouldin
+        return silhouette, davies_bouldin, calinski_harabasz
 
 
 def scatter_plot(df, score, clusters, c_type):
     """Produce scatter plot for the clusters"""
-    categories = df.columns.values
+    labels = df.columns.values
 
     # Scatter plot with all labelled values representing clusters
-    df.plot.scatter(x=categories[0], y=categories[1], c=clusters.labels_, cmap="rainbow")
+    df.plot.scatter(x=labels[0], y=labels[1], c=clusters.labels_, cmap="rainbow", label=score)
 
     # Plot centroids
     if c_type == "K-Means":
         plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], marker="X", c="black")
 
     # Display scores in best position
-    plt.plot([], label=score)
-    plt.legend(handlelength=0, frameon=False, handletextpad=0)
+    plt.legend(handlelength=0, handletextpad=0)
 
     plt.title(c_type)
     plt.show()

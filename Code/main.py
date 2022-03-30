@@ -12,13 +12,13 @@ left_diff = calc_diff(prep("00L"), prep("24L"))
 right_diff = calc_diff(prep("00R"), prep("24R"))
 
 # Example data to cluster and label
-diff = reduce(left_diff)
+prep_left_diff = reduce(left_diff)
 
 # Example plots
-kmeans(diff, params['kmeans'], "plot")
-hierarchical(diff, params['hierarchical'], "plot")
-density(diff, params['density'], "DBSCAN", "plot")
-density(diff, params['density'], "OPTICS", "plot")
+# kmeans(prep_left_diff, params['kmeans'], "plot")
+# hierarchical(prep_left_diff, params['hierarchical'], "plot")
+# density(prep_left_diff, params['density'], "DBSCAN", "plot")
+# density(prep_left_diff, params['density'], "OPTICS", "plot")
 
 # Example parameter sweep
-param_sweep("Hierarchical", params['hierarchical'], diff, "n_clusters", [4, 5, 6])
+param_sweep("Hierarchical", params['hierarchical'], prep_left_diff, "n_clusters", [4, 5, 6, 7, 8, 9, 10])
