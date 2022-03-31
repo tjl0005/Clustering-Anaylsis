@@ -2,8 +2,15 @@ import glob
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
-pd.set_option('display.max_columns', None)
+
+def proc_data(spec1, spec2):
+    """Prepare data from specification for clustering"""
+    zero, twenty_four = prep(spec1), prep(spec2)
+    diff = calc_diff(zero, twenty_four)
+
+    return reduce(diff)
 
 
 def prep(spec):
@@ -72,9 +79,12 @@ def reduce(df):
     if "ID" in df.columns:
         df.drop("ID", axis=1, inplace=True)
 
-    # Reduce dimensions to n
+    # Scale the data before applying PCA
+    df = StandardScaler().fit_transform(df)
+
+    # Reduce dimensions to 2
     pca = PCA(n_components=2)
     principalComponents = pca.fit_transform(df)
 
     # Return the reduced dataframe
-    return pd.DataFrame(data=principalComponents, columns=['PC1', 'PC2'])
+    return pd.DataFrame(data=principalComponents, columns=["Principal Component 1", "Principal Component 2"])
