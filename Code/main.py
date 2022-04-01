@@ -7,19 +7,16 @@ import json
 with open("../config/def_params.json") as f:
     params = json.load(f)
 
-# Dataframes for differences for index knees projected into 2D
-left = proc_data("00L", "24L")
-right = proc_data("00R", "24R")
+# Decide scaling and reduction type
+# method = ["Min-Max", "TSNE"]
+method = ["Standard", "PCA"]
 
-# # Example clustering calls
-# run_ca("K-Means", left, params)
-# run_ca("Hierarchical", left, params)
-# run_ca("DBSCAN", left, params)
-# run_ca("OPTICS", left, params)
+# Dataframes for differences where method
+left = proc_data(["00L", "24L"], method)
+right = proc_data(["00L", "24L"], method)
 
-# Example parameter sweep calls
-algorithm_sweep("K-Means", left, params)
-algorithm_sweep("Hierarchical", left, params)
-# Currently, has problem with sweeps for algorithm and metric
-algorithm_sweep("DBSCAN", left, params)
-algorithm_sweep("OPTICS", left, params)
+run_ca("K-Means", left, params, method)
+run_ca("Hierarchical", left, params, method)
+
+algorithm_sweep("K-Means", left, params, method)
+algorithm_sweep("Hierarchical", left, params, method)

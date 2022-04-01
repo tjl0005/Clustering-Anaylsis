@@ -2,15 +2,16 @@ import glob
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
-def proc_data(spec1, spec2):
+def proc_data(spec, method):
     """Prepare data from specification for clustering"""
-    zero, twenty_four = prep(spec1), prep(spec2)
-    diff = calc_diff(zero, twenty_four)
+    diff = calc_diff(prep(spec[0]), prep(spec[1]))
+    diff = dim_reduce(diff, method[0], method[1])
 
-    return reduce(diff)
+    return diff
 
 
 def prep(spec):
@@ -73,18 +74,19 @@ def calc_diff(zero, twenty_four):
     return diff_df
 
 
-def reduce(df):
+def dim_reduce(df, scale, reduce):
     """Reduce the dimensions of the given dataframe to 2"""
-    # ID is not relevant data
-    if "ID" in df.columns:
-        df.drop("ID", axis=1, inplace=True)
+    # Scale the data before applying reduction techniques
+    if scale == "Standard":
+        df = StandardScaler().fit_transform(df)
+    else:
+        df = MinMaxScaler().fit_transform(df)
 
-    # Scale the data before applying PCA
-    df = StandardScaler().fit_transform(df)
-
-    # Reduce dimensions to 2
-    pca = PCA(n_components=2)
-    principalComponents = pca.fit_transform(df)
+    # Reduce dimensions by either just PCA or through TSNE using PCA
+    if reduce == "PCA":
+        df = PCA(n_components=2).fit_transform(df)
+    else:
+        df = TSNE(n_components=2, learning_rate="auto", init="pca").fit_transform(df)
 
     # Return the reduced dataframe
-    return pd.DataFrame(data=principalComponents, columns=["Principal Component 1", "Principal Component 2"])
+    return pd.DataFrame(data=df, columns=["Component 1", "Component 2"])

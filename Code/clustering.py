@@ -4,35 +4,35 @@ from sklearn import metrics
 import numpy as np
 
 
-def run_ca(c_type, df, params):
+def run_ca(c_type, data, params, method):
     """Produce and display clustering algorithms using specified method"""
     if c_type == "K-Means":
-        kmeans(df, params["kmeans"], "plot")
+        clusters = kmeans(data, params["kmeans"])
     elif c_type == "Hierarchical":
-        hierarchical(df, params["hierarchical"], "plot")
-    elif c_type == "DBSCAN":
-        density(df, params["dbscan"], "DBSCAN", "plot")
+        clusters = hierarchical(data, params["hierarchical"])
     else:
-        density(df, params["optics"], "OPTICS", "plot")
+        clusters = density(data, params[c_type], c_type)
+
+    scatter_plot(c_type, method, data, clusters)
 
 
 def scores(data, labels):
     """Get scores for the clusters produced"""
     # A measure of similarity to other clusters
-    silhouette = np.round(metrics.silhouette_score(data, labels), 2)  # 1 is best, 0 worst
+    sc = np.round(metrics.silhouette_score(data, labels), 2)  # 1 is best, 0 worst
     # Measure of separation
-    davies_bouldin = np.round(metrics.davies_bouldin_score(data, labels), 2)  # Lower is better, 0-1
+    db = np.round(metrics.davies_bouldin_score(data, labels), 2)  # Lower is better, 0-1
     # Dispersion of clusters, is the current number of clusters good
-    calinski_harabasz = np.round(metrics.calinski_harabasz_score(data, labels), 2)  # Higher is better
+    ch = np.round(metrics.calinski_harabasz_score(data, labels), 2)  # Higher is better
 
-    return silhouette, davies_bouldin, calinski_harabasz
+    return sc, db, ch
 
 
-def scatter_plot(c_type, diff_df, score, clusters):
+def scatter_plot(c_type, method, diff_df, clusters):
     """Produce scatter plot for the clusters"""
-    score = ("Silhouette: {}\nDavies-Bouldin: {}\nCalinski-Harabasz: {}\n".format(score[0], score[1], score[2]))
-
-    diff_df.plot.scatter(x="Principal Component 1", y="Principal Component 2", c=clusters.labels_, cmap="tab20", label=score)
+    score = scores(diff_df, clusters.labels_)
+    score = ("SC: {:.2f} \nDB: {}\nCH: {}\n".format(score[0], score[1], score[2]))
+    diff_df.plot.scatter(x="Component 1", y="Component 2", c=clusters.labels_, cmap="tab20", label=score)
 
     # Plot centroids
     if c_type == "K-Means":
@@ -41,34 +41,29 @@ def scatter_plot(c_type, diff_df, score, clusters):
     # Display scores in best position
     plt.legend(handlelength=0, frameon=False, handletextpad=0)
 
-    plt.title(c_type)
-    plt.savefig("../Visualisations/Clusters/{}.png".format(c_type), dpi=600)
+    title = "{} with {} Scaling and {}".format(c_type, method[0], method[1])
+
+    plt.title(title)
+    plt.savefig("../Visualisations/Clusters/{}.png".format(title), dpi=600)
 
 
-def kmeans(data, k_params, display):
+def kmeans(data, k_params):
     """Produce clusters using K-Means"""
     clustering = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
     clustering.fit(data)
 
-    # Decide how to display results
-    if display == "plot":
-        scatter_plot("K-Means", data, scores(data, clustering.labels_), clustering)
-    else:
-        return data, clustering.labels_
+    return clustering
 
 
-def hierarchical(data, h_params, display):
+def hierarchical(data, h_params):
     """Produce clusters using Agglomerative Clustering"""
     clustering = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
     clustering.fit(data)
 
-    if display == "plot":
-        scatter_plot("Hierarchical", data, scores(data, clustering.labels_), clustering)
-    else:
-        return data, clustering.labels_
+    return clustering
 
 
-def density(data, d_params, c_type, display):
+def density(data, d_params, c_type):
     """Produce clusters using either DBSCAN or OPTICS"""
     # Use different parameters so need to be setup separately
     if c_type == "DBSCAN":
@@ -78,7 +73,4 @@ def density(data, d_params, c_type, display):
 
     clustering.fit(data)
 
-    if display == "plot":
-        scatter_plot(c_type, data, scores(data, clustering.labels_), clustering)
-    else:
-        return data, clustering.labels_
+    return clustering
