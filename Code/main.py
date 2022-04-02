@@ -1,22 +1,21 @@
+from Code.visualise import vis_clusters
 from Code.clustering import run_ca
 from Code.data import proc_data
-from Code.ranking import algorithm_sweep
+from Code.evaluate import sweep
 import json
 
 # Default parameters for the algorithms
 with open("../config/def_params.json") as f:
     params = json.load(f)
 
-# Decide scaling and reduction type
-# method = ["Min-Max", "TSNE"]
 method = ["Standard", "PCA"]
 
 # Dataframes for differences where method
-left = proc_data(["00L", "24L"], method)
-right = proc_data(["00L", "24L"], method)
+diff = proc_data(["00L", "24L"], method)
 
-run_ca("K-Means", left, params, method)
-run_ca("Hierarchical", left, params, method)
+vis_clusters("K-Means", "Left", method, diff, run_ca("K-Means", diff, params))
+vis_clusters("Hierarchical", "Left", method, diff, run_ca("Hierarchical", diff, params))
 
-algorithm_sweep("K-Means", left, params, method)
-algorithm_sweep("Hierarchical", left, params, method)
+
+# sweep("K-Means", "Left", diff, params, method)
+# sweep("Hierarchical", "Left", diff, params, method)

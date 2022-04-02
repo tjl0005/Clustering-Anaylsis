@@ -1,15 +1,15 @@
-import glob
-import numpy as np
-import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import pandas as pd
+import numpy as np
+import glob
 
 
 def proc_data(spec, method):
     """Prepare data from specification for clustering"""
     diff = calc_diff(prep(spec[0]), prep(spec[1]))
-    diff = dim_reduce(diff, method[0], method[1])
+    diff = dim_reduce(diff, method)
 
     return diff
 
@@ -74,16 +74,16 @@ def calc_diff(zero, twenty_four):
     return diff_df
 
 
-def dim_reduce(df, scale, reduce):
+def dim_reduce(df, method):
     """Reduce the dimensions of the given dataframe to 2"""
-    # Scale the data before applying reduction techniques
-    if scale == "Standard":
+    # Scale the data before reducing
+    if method[0] == "Standard":
         df = StandardScaler().fit_transform(df)
     else:
         df = MinMaxScaler().fit_transform(df)
 
     # Reduce dimensions by either just PCA or through TSNE using PCA
-    if reduce == "PCA":
+    if method[1] == "PCA":
         df = PCA(n_components=2).fit_transform(df)
     else:
         df = TSNE(n_components=2, learning_rate="auto", init="pca").fit_transform(df)
