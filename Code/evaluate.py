@@ -10,7 +10,6 @@ def sweep(c_type, side, data, params, method):
     if c_type == "K-Means":
         param_sweep(c_type, params["kmeans"], data, method, side, "n_clusters", range(2, 11))
         param_sweep(c_type, params["kmeans"], data, method, side, "n_init", range(10, 60, 10))
-        param_sweep(c_type, params["kmeans"], data, method, side, "max_iter", range(100, 1100, 100))
 
     elif c_type == "Hierarchical":
         param_sweep(c_type, params["hierarchical"], data, method, side, "n_clusters", range(2, 11))
@@ -26,14 +25,12 @@ def sweep(c_type, side, data, params, method):
 
     else:
         param_sweep(c_type, params[c_type], data, method, side, "min_samples", range(5, 11))
-        param_sweep(c_type, params[c_type], data, method, side, "metric", ["minkowski", "euclidean", "manhattan"])
 
 
 def param_sweep(c_type, c_params, data, method, side, param, vals):
     """Test algorithm with different parameter values"""
     silhouette = []
     davies = []
-    calinski = []
     default = c_params[param]
 
     for val in vals:
@@ -52,9 +49,8 @@ def param_sweep(c_type, c_params, data, method, side, param, vals):
         score = scores(data, clusters.labels_)
         silhouette.append(score[0])
         davies.append(score[1])
-        calinski.append(score[2])
 
-    c_scores = [silhouette, davies, calinski]
+    c_scores = [silhouette, davies]
     # Reset parameter
     c_params[param] = default
     # Remove current parameter details
@@ -71,6 +67,5 @@ def print_results(c_scores, vals, param):
     table.add_column(param, vals)
     table.add_column("Silhouette", c_scores[0])
     table.add_column("Davies-Bouldin", c_scores[1])
-    table.add_column("Calinski-Harabasz", c_scores[2])
 
     print(table)

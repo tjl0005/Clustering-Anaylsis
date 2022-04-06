@@ -8,14 +8,20 @@ import json
 with open("../config/def_params.json") as f:
     params = json.load(f)
 
-method = ["Standard", "PCA"]
+method = ["Min-Max", "PCA"]
 
 # Dataframes for differences where method
-diff = proc_data(["00L", "24L"], method)
+l_diff = proc_data(["00R", "24R"], method)
+r_diff = proc_data(["00R", "24R"], method)
 
-vis_clusters("K-Means", "Left", method, diff, run_ca("K-Means", diff, params))
-vis_clusters("Hierarchical", "Left", method, diff, run_ca("Hierarchical", diff, params))
+vis_clusters("K-Means", "Left", method, l_diff, run_ca("K-Means", l_diff, params))
+vis_clusters("Hierarchical", "Left", method, l_diff, run_ca("Hierarchical", l_diff, params))
 
+vis_clusters("K-Means", "Right", method, r_diff, run_ca("K-Means", r_diff, params))
+vis_clusters("Hierarchical", "Right", method, r_diff, run_ca("Hierarchical", r_diff, params))
 
-# sweep("K-Means", "Left", diff, params, method)
-# sweep("Hierarchical", "Left", diff, params, method)
+sweep("K-Means", "Left", l_diff, params, method)
+sweep("Hierarchical", "Left", l_diff, params, method)
+
+sweep("K-Means", "Right", r_diff, params, method)
+sweep("Hierarchical", "Right", r_diff, params, method)
