@@ -1,0 +1,6 @@
+{
+	"left": 
+		{"preference": [-1, -5, -7, -10], "max_iter": 1000},
+	"right": 
+		{"preference": [-1, -6, -8, -16], "max_iter": 1000}
+}

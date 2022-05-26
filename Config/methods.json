@@ -1,0 +1,10 @@
+{
+	"pca_rob": 
+		{"scaling": "Robust", "reduction": "PCA"}, 
+	"pca_min": 
+		{"scaling": "Min-Max", "reduction": "PCA"},
+	"feature_rob": 
+		{"scaling": "Robust", "reduction": "Feature Agglomeration"},
+	"feature_min": 
+		{"scaling": "Min-Max", "reduction": "Feature Agglomeration"}
+}

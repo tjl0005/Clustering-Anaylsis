@@ -1,17 +1,33 @@
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-import pandas as pd
-import numpy as np
 import glob
+import json
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from sklearn.cluster import FeatureAgglomeration as featAgl
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler as stdScal, MinMaxScaler as mmScal, RobustScaler as robScal
 
 
-def proc_data(spec, method):
-    """Prepare data from specification for clustering"""
-    diff = calc_diff(prep(spec[0]), prep(spec[1]))
-    diff = dim_reduce(diff, method)
+def initialise(params):
+    """Prepare variables to be used for experiments, usually set to default parameters"""
+    # Config Directories
+    dirs = ["../config/parameters/{}.json".format(params), "../config/methods.json"]
 
-    return diff
+    with open(dirs[0]) as f1, open(dirs[1]) as f2:
+        params = json.load(f1)
+        method = json.load(f2)
+
+    return vis_scaled(calc_diff(prep("00L"), prep("24L")), "Left", "PCA", "Components")
+    # Returns the requested parameters, all methods and the progression profiles
+    # return params, method, calc_diff(prep("00L"), prep("24L")), calc_diff(prep("00R"), prep("24R"))
+
+
+def get_vals(file, spec, param):
+    """Get optimised parameter values, requires the algorithm, index and parameter"""
+    with open("../config/parameters/{}.json".format(file)) as f:
+        vals = json.load(f)
+    print(spec)
+    return vals[spec][param]
 
 
 def prep(spec):
@@ -74,19 +90,76 @@ def calc_diff(zero, twenty_four):
     return diff_df
 
 
-def dim_reduce(df, method):
-    """Reduce the dimensions of the given dataframe to 2"""
+def proc_data(df, method):
+    """Reduce the dimensions of the given dataframe to 2 using specified method"""
     # Scale the data before reducing
-    if method[0] == "Standard":
-        df = StandardScaler().fit_transform(df)
+    if method["scaling"] == "Standard":
+        df = stdScal().fit_transform(df)
+    elif method["scaling"] == "Robust":
+        df = robScal().fit_transform(df)
     else:
-        df = MinMaxScaler().fit_transform(df)
+        df = mmScal().fit_transform(df)
 
     # Reduce dimensions by either just PCA or through TSNE using PCA
-    if method[1] == "PCA":
+    if method["reduction"] == "PCA":
         df = PCA(n_components=2).fit_transform(df)
     else:
-        df = TSNE(n_components=2, learning_rate="auto", init="pca").fit_transform(df)
+        df = featAgl(n_clusters=2).fit_transform(df)
 
     # Return the reduced dataframe
     return pd.DataFrame(data=df, columns=["Component 1", "Component 2"])
+
+
+def prod_ds(diff, methods):
+    """Produce different versions of the dataset from different processing methods"""
+    dfs = []
+    if len(methods) == 4:
+        for method in methods:
+            dfs.append(proc_data(diff, methods[method]))
+    else:
+        for i in range(4):
+            dfs.append(proc_data(diff, methods))
+
+    return dfs
+
+
+def vis_scaled(df, side, reduction, display):
+    """Visualise the effects of scaling and reduction methods"""
+    dss = [stdScal().fit_transform(df), robScal().fit_transform(df),
+           mmScal().fit_transform(df)]  # Array containing scaled datasets
+    s_methods = ["Standard", "Robust", "Min-Max"]  # List of scaling methods for reference
+    cols = ["C1", "C2"]
+    i = 0
+
+    # Different display methods require different figure configurations
+    if display == "Scatter":
+        fig, axes = plt.subplots(2, 2, figsize=(10, 8), tight_layout=True)
+        axes[1, 1].axis('off')
+    else:
+        fig, axes = plt.subplots(3, 1, figsize=(15, 15), tight_layout=True)
+
+    ax = axes.flatten()  # Store axes as array
+
+    # Go through all scaled versions of the datasets
+    while i < 3:
+        ax[i].set_title("{} with {} Scaling".format(reduction, s_methods[i]))
+
+        # Apply reduction method
+        if reduction == "PCA":
+            dss[i] = pd.DataFrame(data=PCA(n_components=2).fit_transform(dss[i]), columns=cols)
+        elif reduction == "Feature":
+            dss[i] = pd.DataFrame(data=featAgl(n_clusters=2).fit_transform(dss[i]), columns=cols)
+
+        if display == "Scatter":
+            ax[i].scatter(dss[i][cols[0]], dss[i][cols[1]])
+        else:
+            ax[i].plot(dss[i][cols[0]])
+            ax[i].plot(dss[i][cols[1]])
+
+        i += 1
+
+    ax[2].annotate('sub2', xy=(0.5, -0.5), va='center', ha='center', weight='bold', fontsize=15)
+
+    # plt.savefig("../Visualisations/{} Indexes/Dataset/{} Indexes Scaled with {}.png".format(side, side, reduction),
+    #             dpi=600)
+    plt.show()

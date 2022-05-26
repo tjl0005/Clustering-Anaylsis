@@ -1,40 +1,34 @@
-from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN, OPTICS
+from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN, AffinityPropagation
 
 
 def run_ca(c_type, data, params):
     """Produce and display clustering algorithms using specified method"""
     if c_type == "K-Means":
-        return kmeans(data, params["kmeans"])
+        clustering = KMeans(n_clusters=params["n_clusters"], n_init=params["n_init"], max_iter=params["max_iter"])
     elif c_type == "Hierarchical":
-        return hierarchical(data, params["hierarchical"])
+        clustering = AgglomerativeClustering(n_clusters=params["n_clusters"], linkage=params["linkage"])
+    elif c_type == "Affinity Propagation":
+        if params["preference"] != "None":
+            clustering = AffinityPropagation(damping=params["damping"], preference=params["preference"], max_iter=1000)
+        else:
+            clustering = AffinityPropagation(damping=params["damping"], max_iter=1000)
     else:
-        return density(data, params[c_type], c_type)
+        clustering = DBSCAN(eps=params["eps"], min_samples=params["min_samples"])
+
+    return clustering.fit(data)
 
 
-def kmeans(data, k_params):
-    """Produce clusters using K-Means"""
-    clustering = KMeans(n_clusters=k_params["n_clusters"], n_init=k_params["n_init"], max_iter=k_params["max_iter"])
-    clustering.fit(data)
+def prod_clusters(types, data, params, vals, param):
+    """Produce array of different clusters"""
+    c_labels = []
 
-    return clustering
+    for i in range(4):
+        if isinstance(vals, list):
+            params[types][param] = vals[i]
+            print(params)
+            c_labels.append(run_ca(types, data[i], params[types]))
+        else:
+            c_labels.append(run_ca(types, data[i], params[types]))
+        i += 1
 
-
-def hierarchical(data, h_params):
-    """Produce clusters using Agglomerative Clustering"""
-    clustering = AgglomerativeClustering(n_clusters=h_params["n_clusters"], linkage=h_params["linkage"])
-    clustering.fit(data)
-
-    return clustering
-
-
-def density(data, d_params, c_type):
-    """Produce clusters using either DBSCAN or OPTICS"""
-    # Use different parameters so need to be setup separately
-    if c_type == "DBSCAN":
-        clustering = DBSCAN(eps=d_params["eps"], min_samples=d_params["min_samples"])
-    else:
-        clustering = OPTICS(min_samples=d_params["min_samples"], cluster_method=d_params["cluster_method"])
-
-    clustering.fit(data)
-
-    return clustering
+    return c_labels

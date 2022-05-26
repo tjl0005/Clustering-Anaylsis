@@ -1,0 +1,6 @@
+{
+	"left": 
+		{"n_clusters": [18, 16, 20, 18], "linkage": ["ward","ward", "complete", "ward"]}, 
+	"right": 
+		{"n_clusters": [20, 20, 20, 20]}
+}
