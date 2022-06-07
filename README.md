@@ -1,28 +1,26 @@
-# Clustering Analysis of Knee Osteoarthritis Structural Progression Profiles
+# Do Distinct Subgroups of Patients Exist within the Knee Osteoarthritis Cohort?
 ## Motivation and rationale  
 
 ### The Context:  
-Osteoarthritis is a common condition that affects joints creating pain and difficulty in moving, in this I will be focusing on occurrences within the knee joint. It is caused by cartilage breaking down within the joints which can occur from injuries, family history and obesity [1]. Osteo is the most common form of arthritis affecting over 32.5 million adults in the US alone [2]. It is common in the older population because it occurs from usage and so increasing age means an increased risk of osteoarthritis. 
+Osteoarthritis is a very common disease that causes cartilage to breakdown within the joints, which in turn causes joint space narrowing. Although it is very common there is still a limited understanding of how the disease progresses. One of the main limitations due to this lack of understanding is the inability to limit the diseases progression and the rate at which cartilage breaks down.  Osteo is the most common form of osteoarthritis and can occur due to a multiride of causes: age, obesity, joint injury and family history, which with an ageing population means the disease is only becoming more common.
+### Problem
+The main purpose of this project is to try and find distinct subgroups of patients within the knee osteoarthritis cohort (OAI). This is only a hypothesis as it is unknown if distinct groups will exist within the data. Clustering data from the OAI has been performed before and been successful, these findings theorised to of been potentially useful for various reasons.
+Clustering is the method to try and find these distinct subgroups because mentioned it is unknown of these groups exist, so we cannot use classification (another method for categorising) with the data because the labels are unknown. In this project a variety of clustering types will be explored as well as various processing approaches to prepare the data for clustering.
 
-### The Problem:  
-Many distinct patient subgroups are present within the osteoarthritis cohort and visualising them could further our understanding. With this further understanding we can realise cases where people may be more predisposed to osteoarthritis than initially expected. As well as this we can improve treatment plans to be more relevant to specific groups and narrow research areas. The main difficulty will be clustering the data from the progression profiles as there are many different algorithms all with different variations and parameter options. So, I will also have to measure the success of the clusters produced.
-
-### My Approach:
-For my project, I intend to analyse patient progression profiles from the knee osteoarthritis initiative cohort and find similarities in these profiles, showing distinct patient subgroups. To do this I will integrate the data and use a clustering algorithm to group data by the present similarities. These clusters will represent the distinct patient subgroups in the data. To make this information understandable I will produce visualisations of the findings. I aim to do this with the use of Python and its packages Pandas, Scikit-Learn and Seaborn. Which are for data analysis, clustering algorithms and visualisation respectively.
 
 ## Aim and objectives  
 ### Aim: Analyse data from patient progression profiles to find common subtypes of diseases and visualise the findings
 ### Objectives:
-1)	Understand the data present in the progression profiles
-Improving my understanding of what the data in these profiles represent will allow me to refine my research areas and ability to analyse the data. I will complete this objective before I begin to integrate the data as otherwise, mistakes will likely occur.  
-2)	Integrate the data from progression profiles
-Combining all of the data from the profiles means I can begin implementing clustering algorithms. Also, It will give me a new view of the data from which allows me to draw conclusions and predictions of what the clusters may resemble, enabling me to make informed decisions when assessing the clusters.  
-3)	Explore different clustering algorithms that can be used with the data
-These algorithms will group similar data showing common occurrences between the progression profiles and trends. I will visualise these clusters because the algorithms have various parameters each affecting the clusters produced and in turn the provided view, and I will evaluate them using metrics built-in to Scikit-Learn.  
-4)	Group common similarities between profiles using the optimal clustering algorithm
-I will discover the optimal clustering algorithm using metrics built-in to Scikit-Learn [3]. For example, using “Silhouette Coefficient” which produces a numerical score representing the distance between clusters, where the aim is to achieve a high score. I will be using three separate metrics, which will allow me to assess the clustering algorithms and tune them as necessary.  
-5)	Visualise similarities in an informative manner using the clusters produced
-With the data being clustered I can begin to conclude the groupings by producing visualisations of the data. These visualisations should show distinct patient subgroups.
+1)	Understand the data present in the progression profiles   
+The dataset consists of many different measurements and so understanding the purpose and relevance of these measurements prevents misunderstandings when processing the data and drawing conclusions from the findings.  
+2)	Effectively process the data for clustering  
+The data in its initial state cannot be clustered in attempt to find distinct subgroups of patients. A new dataset containing the differences needs to be produced to show the structural progression for the patients, then this dataset needs to be dimensionally reduced.  
+3)	Evaluate clustering algorithms results using metrics  
+Clusters cannot be assessed using just one method such as visualisations because they can be very misleading so an effective method using both visuals and various metrics need to be used.  
+4)	Optimise algorithms by tuning the parameters   
+Each algorithm explored has many different parameters all of which effect the produced clusters and their effectiveness. Parameter sweeps will be used in combination with metrics to optimise the algorithms.  
+5)	Visualise clusters in an informative manner  
+Findings need to be presented in a meaningful way, the visualisations of clusters will vary for each type as they can produce different shapes and contain different types of points such as the centroids in K-Means.  
 
 ## Background Research
 | Source                                            | Description | Relevance |
