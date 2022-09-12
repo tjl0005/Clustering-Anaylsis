@@ -1,6 +1,6 @@
-from Code.clustering import run_ca
-from Code.data import proc_data
-from Code.visualise import vis_results, scores
+from clustering import run_ca
+from data import proc_data
+from visualise import vis_results, scores
 from prettytable import PrettyTable
 import numpy as np
 

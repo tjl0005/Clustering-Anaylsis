@@ -17,9 +17,11 @@ def initialise(params):
         params = json.load(f1)
         method = json.load(f2)
 
-    return vis_scaled(calc_diff(prep("00L"), prep("24L")), "Left", "PCA", "Components")
+    # Run instead if just scaling visuals are required
+    # return vis_scaled(calc_diff(prep("00L"), prep("24L")), "Left", "PCA", "Components")
+
     # Returns the requested parameters, all methods and the progression profiles
-    # return params, method, calc_diff(prep("00L"), prep("24L")), calc_diff(prep("00R"), prep("24R"))
+    return params, method, calc_diff(prep("00L"), prep("24L")), calc_diff(prep("00R"), prep("24R"))
 
 
 def get_vals(file, spec, param):
@@ -160,6 +162,6 @@ def vis_scaled(df, side, reduction, display):
 
     ax[2].annotate('sub2', xy=(0.5, -0.5), va='center', ha='center', weight='bold', fontsize=15)
 
-    # plt.savefig("../Visualisations/{} Indexes/Dataset/{} Indexes Scaled with {}.png".format(side, side, reduction),
-    #             dpi=600)
+    plt.savefig("../Visualisations/{} Indexes/Dataset/{} Indexes Scaled with {}.png".format(side, side, reduction),
+                dpi=600)
     plt.show()
